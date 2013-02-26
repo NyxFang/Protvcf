@@ -1,0 +1,360 @@
+﻿package pages.work{
+	
+	import flash.display.MovieClip;
+	
+	import flash.events.MouseEvent;
+	import flash.events.TimerEvent;
+	
+	import flash.utils.Timer;
+	
+	import flash.text.TextField;
+	
+	import com.greensock.TweenMax;
+	import components.utils.DataStream;
+	import com.greensock.*;
+	import com.greensock.events.LoaderEvent;
+	import com.greensock.loading.*;
+	
+	public class ImageDetailSection{
+		
+		private var view:MovieClip;
+		
+		private var image_Group:MovieClip;
+		
+		private const SPACE:int = 5; 
+		
+		private var SPEED:int = 2;
+		
+		private var timer:Timer;
+		
+		private var itemArr:Array;
+		
+		private var queue:LoaderMax;
+		
+		private var loadingmc:MovieClip;
+		
+		private var loadingContent:MovieClip;
+		
+		private var loadingTxt:TextField;
+		
+		private var leftBtn:MovieClip;
+		
+		private var rightBtn:MovieClip;
+		
+		private var flag:Boolean = false;
+		
+		private var xmlLength:int = 0;
+		
+		public function ImageDetailSection(_view:MovieClip,_loadingmc:MovieClip){
+			
+			view = _view;
+			
+			loadingmc = _loadingmc;
+			
+			loadingmc.visible = false;
+			
+			view.visible = true;
+			
+			image_Group = view.getChildByName("image_group") as MovieClip;
+			
+			loadingContent = loadingmc.getChildByName("loading_mc") as MovieClip;
+			
+			loadingTxt = loadingmc.getChildByName("txt") as TextField;
+						
+			image_Group.alpha = 0;
+						
+			itemArr = [];
+			
+			timer = new Timer(24);
+			
+			timer.addEventListener(TimerEvent.TIMER,loop);
+						
+			leftBtn = view.getChildByName("leftbtn") as MovieClip;
+			
+			rightBtn = view.getChildByName("rightbtn") as MovieClip;
+			
+			leftBtn.buttonMode = true;
+			
+			rightBtn.buttonMode = true;
+						
+			//effectIn();
+			
+		}// end VideoDetailSection
+		
+		public function setData(_xml:XML,_timerflag:Boolean = true):void{
+			
+			TweenLite.to(image_Group, 1, {alpha:0});
+			
+			loadingTxt.text = "0%";
+			
+			queue = new LoaderMax({name:"mainQueue", onProgress:progressHandler, onComplete:completeHandler, onError:errorHandler});
+			
+			xmlLength = _xml["items"]["item"].length();
+			
+			for(var i:int = 0 ; i<xmlLength; i++){
+				
+				var item:ImageItem = new ImageItem(startTimer,stopTimer,_timerflag);
+				
+				//item.startLoad(_xml["items"]["item"][i]["imagesection_thumbnail"],_xml["items"]["item"][i]["imagesection_txt"]);
+				
+				queue.append(new ImageLoader(_xml["items"]["item"][i]["imagesection_thumbnail"],{name:i+"thumbnail", container:item.imageContent, x:0, y:0, width:item.imageContent.width, height:item.imageContent.height}));
+																																																					
+				queue.append(new SWFLoader(_xml["items"]["item"][i]["imagesection_txt"],{name:i+"title", container:item.infoContent, x:0, y:0, width:item.infoContent.width, height:item.infoContent.height}));	
+				
+				if(i == 0){
+					
+					item.x = 0;
+					
+				}
+				
+				item.x = (item.width + SPACE)*i;
+				
+				image_Group.addChildAt(item,0);
+				
+				item.index = i;
+				
+				itemArr.push(item);
+				
+			}// end for()
+			
+			queue.load();
+			
+			//startTimer();
+			if(_timerflag){
+			
+				configEvens()
+				
+			}else{
+				
+				removeConfigEvens();
+				
+			}
+		}// end setData();
+		
+		private function configEvens():void{
+			
+			leftBtn.addEventListener(MouseEvent.ROLL_OUT,outHandler);
+				
+			leftBtn.addEventListener(MouseEvent.ROLL_OVER,overHandler);
+							
+			rightBtn.addEventListener(MouseEvent.ROLL_OUT,outHandler);
+				
+			rightBtn.addEventListener(MouseEvent.ROLL_OVER,overHandler);
+			
+		}
+		
+		private function removeConfigEvens():void{
+			
+			leftBtn.removeEventListener(MouseEvent.ROLL_OUT,outHandler);
+				
+			leftBtn.removeEventListener(MouseEvent.ROLL_OVER,overHandler);
+							
+			rightBtn.removeEventListener(MouseEvent.ROLL_OUT,outHandler);
+				
+			rightBtn.removeEventListener(MouseEvent.ROLL_OVER,overHandler);
+			
+		}
+				
+		public function loop(evt:TimerEvent):void{
+			
+			//if(image_Group.x<=view.stage.stageWidth-image_Group.width){
+			if(image_Group.x<=1000-image_Group.width){
+				
+				if(flag){
+					
+					stopTimer();
+					
+				}
+				
+				SPEED = -2;
+				
+			}
+			
+			if(image_Group.x>=0){
+				
+				if(flag){
+					
+					stopTimer();
+					
+				}
+				
+				SPEED = 2;
+				
+			}
+			
+			image_Group.x-=SPEED;
+			
+			/*if(image_Group.x%(itemArr[0].width+SPACE) == 0 || image_Group.x%(itemArr[0].width+SPACE) == -1){
+				
+				changeArr()
+			}*/
+			
+		}// end StartMove();
+		
+		/*private function changeArr():void{
+			
+			itemArr[0].alpha = 1;
+			
+			itemArr[0].x = itemArr[itemArr.length-1].x + itemArr[itemArr.length-1].width + SPACE;
+					
+			itemArr.push(itemArr.shift());
+			
+		}// end changeArr()*/
+		
+		public function startTimer():void{
+			
+			timer.start();
+			
+		}
+		
+		public function stopTimer():void{
+			
+			timer.reset();
+			
+			timer.stop();
+			
+		}// end StopMove();
+		
+		
+		private function backHandler(evt:MouseEvent):void{
+			
+			stopTimer();
+			
+			timer.removeEventListener(TimerEvent.TIMER,loop);
+			
+			timer = null;
+			
+			TweenMax.to(view,0.5,{alpha:0,onComplete:function(){
+			
+				view["parent"].gotoAndPlay(1);
+				
+				view.visible = false;
+				
+			}});
+			
+		}// end backHandler();
+		
+		private function outHandler(evt:MouseEvent):void{
+			
+			flag = false;
+			
+			if(!timer.running){
+				
+				startTimer();
+				
+			}
+			
+			if(evt.currentTarget.name == "leftbtn"){
+				
+				SPEED = -2;
+				
+			}else{
+				
+				SPEED = 2;
+				
+			}
+			
+			MovieClip(evt.currentTarget).gotoAndPlay(1);
+			
+		}
+		
+		private function overHandler(evt:MouseEvent):void{
+			
+			flag = true;
+			
+			if(evt.currentTarget.name == "leftbtn"){
+				
+				SPEED = -8;
+				
+			}else{
+				
+				SPEED = 8;
+				
+			}
+			
+			MovieClip(evt.currentTarget).gotoAndPlay(2);
+			
+		}
+		
+		public function effectOut():void{
+									
+			TweenMax.to(view,0.5,{autoAlpha:0});
+						
+		}// end effectOut();
+		
+		public function effectIn():void{
+			
+			TweenMax.to(view,0.5,{autoAlpha:1});
+			
+		}// end effectIn();
+		
+		public function enabledMouse(_i:int,_enabled:Boolean):void{
+			
+			itemArr[_i].itemBtnEnabeld(_enabled);
+			
+		}
+		
+		private function progressHandler(event:LoaderEvent):void {
+			
+			loadingmc.visible = true;
+			
+			loadingmc.alpha = 1;
+			
+     		loadingTxt.text = String(int(queue.progress*100)+"%");
+ 		}
+ 
+		private function completeHandler(event:LoaderEvent):void {
+   			
+			loadingmc.visible = false;
+			
+			if(xmlLength<=4){
+				
+				image_Group.x = 7;
+				
+				stopTimer();
+				
+			}else{
+					
+				startTimer();
+					
+			}
+			
+			TweenLite.to(image_Group, 1, {alpha:1});
+			
+		}
+ 
+		private function errorHandler(event:LoaderEvent):void {
+    		trace("error occured with " + event.target + ": " + event.text);
+		}
+		
+		public function clear():void{
+			
+			stopTimer();
+			
+			for(var i:int = 0 ; i<itemArr.length ; i++){
+				
+				itemArr[i].clear();
+				
+			}
+			
+			while(image_Group.numChildren>0){
+				
+				image_Group.removeChildAt(0);
+				
+			}
+			
+			itemArr = [];
+			
+			if(queue){
+			
+				queue.empty(true,true);
+				
+			}
+			
+			image_Group.x = 0;
+			
+		}
+		
+	}// end class
+	
+}// end package
